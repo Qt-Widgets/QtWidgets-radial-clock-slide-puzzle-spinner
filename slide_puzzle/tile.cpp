@@ -29,12 +29,10 @@
 #include <QGraphicsItemAnimation>
 #include <QGraphicsSceneMouseEvent>
 
-#include <iostream>
-
 /************************************************************************
 ** Constants
 ************************************************************************/
-const int Tile::cType = QGraphicsItem::UserType+1;
+const int Tile::Type = QGraphicsItem::UserType+1;
 
 /************************************************************************
 ** Constructor/Destructor
@@ -43,27 +41,22 @@ Tile::Tile(int id, int row, int column, const QImage &image) :
     m_id(id),
     m_row(row),
     m_column(column),
-    m_image(image)
+    m_image(image),
+    m_animation(0)
 {
     setActive(true);
     setVisible(true);
-    m_timeLine = new QTimeLine();
-    m_timeLine->setDuration(500);
 
-    m_animation = new QGraphicsItemAnimation();
-    m_animation->setTimeLine(m_timeLine);
-    m_animation->setItem(this);
-    connect(m_timeLine, SIGNAL(finished()), this, SLOT(moved()));
+    m_timeLine.setDuration(500);
 }
 
 Tile::~Tile()
 {
-    delete m_animation;
 }
 
 int Tile::type() const
 {
-    return cType;
+    return Type;
 }
 
 int Tile::arow() const
@@ -112,34 +105,43 @@ std::ostream &Tile::describe(std::ostream &strm) const
     int x = this->x();
     int y = this->y();
     QPointF c = this->center();
+    QRectF b = this->boundingRect();
+    b.translate(x, y);
     strm << "Tile (" << this << ")" << " "
          << "[" << row() << "/" << column() << "] [" << arow() << "/" << acolumn() << "]" << std::endl
-         << "  Border: " << x << "," << y << " - " << x+width()-1 << "," << y+height()-1 << std::endl
+         << "  Border: " << b.x() << "," << b.y() << " - " << b.right() << "," << b.bottom() << std::endl
          << "  X, Y: " << x << "," << y << " (" << c.x() << "," << c.y() << ")" << std::endl;
     return strm;
 }
 
-void Tile::shift(int dx, int dy, bool events)
+void Tile::shift(int dx, int dy, QObject *obj, const char *slot)
 {
-    if (events) {
-        startMove();
-    }
-
-    QTimeLine *tl = new QTimeLine();
-    tl->setDuration(500);
+    QTimeLine *tl = timeLine();
+    tl->disconnect(tl, 0, 0, 0);
+    tl->connect(tl, SIGNAL(finished()), this, SLOT(cleanAnimation()));
 
     QGraphicsItemAnimation *animation = new QGraphicsItemAnimation();
     animation->setTimeLine(tl);
     animation->setItem(this);
-    if (events) {
-        connect(tl, SIGNAL(finished()), this, SLOT(stopMove()));
-    }
+    if (obj) connect(tl, SIGNAL(finished()), obj, slot);
 
     QPointF o = origin();
     animation->setPosAt(0, o);
     animation->setPosAt(1.0, o + QPointF(dx, dy));
 
     tl->start();
+}
+
+void Tile::borderLines(const QRectF &rect, int d, QList<QLineF> &lines)
+{
+    // Top line
+    lines.append(QLineF(rect.x()+d, rect.y()+d, rect.right()-d, rect.y()+d));
+    // Right line
+    lines.append(QLineF(rect.right()-d, rect.y()+d, rect.right()-d, rect.bottom()-d));
+    // Bottom line
+    lines.append(QLineF(rect.right()-d, rect.bottom()-d, rect.x()+d, rect.bottom()-d));
+    // Left line
+    lines.append(QLineF(rect.x()+d, rect.bottom()-d, rect.x()+d, rect.y()+d));
 }
 
 void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -151,7 +153,8 @@ void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
         return;
     }
 
-    shift(xf*width(), yf*height(), true);
+    emit start();
+    shift(xf*width(), yf*height(), this, SIGNAL(stop()));
 }
 
 void Tile::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
@@ -159,18 +162,18 @@ void Tile::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
     Q_UNUSED(option);
     Q_UNUSED(widget);
     painter->drawImage(0, 0, m_image);
-    if (border()) {
-        int w = width();
-        int h = height();
+    if (border()) {  
         QPen pen(Qt::black);
-        int thick = std::min(w,h)/30;
+        int thick = std::min(width(), height())/30;
         pen.setWidth(thick);
         painter->setPen(pen);
-        int d = thick/2;
-        painter->drawLine(QPointF(d,d),QPointF(w-d,d));
-        painter->drawLine(QPointF(d,h-d),QPointF(w-d,h-d));
-        painter->drawLine(QPointF(d,d),QPointF(d,h-d));
-        painter->drawLine(QPointF(w-d,d),QPointF(w-d,h-d));
+        QList<QLineF> lines;
+        QRectF box = boundingRect();
+        borderLines(box, thick/2, lines);
+        for(QList<QLineF>::const_iterator it(lines.begin());
+            it != lines.end(); it++) {
+            painter->drawLine(*it);
+        }
     }
 }
 
@@ -205,7 +208,7 @@ bool Tile::neighbor(int &xf, int &yf) const
             for(QList<QGraphicsItem*>::const_iterator it(items.cbegin());
                 it != items.cend(); it++) {
                 QGraphicsItem* item = *it;
-                if (item->type() == Tile::cType) {
+                if (item->type() == Tile::Type) {
                     found = true;
                     break;
                 }
@@ -219,17 +222,7 @@ bool Tile::neighbor(int &xf, int &yf) const
     return false;
 }
 
-void Tile::startMove()
+void Tile::cleanAnimation()
 {
-    emit start();
-}
-
-void Tile::stopMove()
-{
-    emit stop();
-}
-
-void Tile::moved()
-{
-    emit done();
+    if (m_animation) delete m_animation;
 }

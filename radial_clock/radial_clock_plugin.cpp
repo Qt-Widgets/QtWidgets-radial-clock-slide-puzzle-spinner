@@ -17,7 +17,7 @@
 **
 ** Software Author: Brian Hill <brian.hill@glowfish.ca>
 **
-** Summary: Companion class for the speedometer control Widget
+** Summary: Companion class for the radial clock widget
 **
 ****************************************************************************/
 
@@ -33,8 +33,6 @@ RadialClockPlugin::RadialClockPlugin(QObject *parent) :
     QObject(parent), m_initialized(false)
 {
 }
-
-//Q_EXPORT_PLUGIN2( RadialClockPlugin, RadialClockPlugin );
 
 void RadialClockPlugin::initialize(QDesignerFormEditorInterface *core)
 {

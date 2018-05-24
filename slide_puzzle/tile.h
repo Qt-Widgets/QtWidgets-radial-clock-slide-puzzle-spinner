@@ -26,6 +26,7 @@
 
 #include <QObject>
 #include <QGraphicsItem>
+#include <QTimeLine>
 #include <QGraphicsItemAnimation>
 
 #include <iostream>
@@ -39,7 +40,7 @@ public:
     explicit Tile(int id, int row, int column, const QImage &image);
     ~Tile();
 
-    static const int cType;
+    static const int Type;
     virtual int type() const;
 
     /************************************************************************
@@ -74,7 +75,9 @@ public:
 
     std::ostream &describe(std::ostream &strm) const;
 
-    void shift(int dx, int dy, bool events);
+    void shift(int dx, int dy, QObject *o, const char *m);
+
+    static void borderLines(const QRectF &rect, int d, QList<QLineF> &lines);
 
 protected:
     /************************************************************************
@@ -89,9 +92,7 @@ signals:
     void done();
 
 public slots:
-    void startMove();
-    void stopMove();
-    void moved();
+    void cleanAnimation();
 
 private:
     /************************************************************************
@@ -102,8 +103,10 @@ private:
     int m_row;
     int m_column;
     QImage m_image;
-    QTimeLine *m_timeLine;
+    QTimeLine m_timeLine;
     QGraphicsItemAnimation *m_animation;
+
+    QTimeLine *timeLine() { return &m_timeLine; }
 
     bool neighbor(int &xf, int &yf) const;
 };

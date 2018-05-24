@@ -17,7 +17,7 @@
 **
 ** Software Author: Brian Hill <brian.hill@glowfish.ca>
 **
-** Summary: Header of the companion class for the radial clock Widget
+** Summary: Header of the companion class for the radial clock widget
 **
 ****************************************************************************/
 

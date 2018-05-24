@@ -1,18 +1,55 @@
+/****************************************************************************
+**
+** Copyright (C) 2018 Brian Hill
+** All rights reserved.
+**
+** License Agreement
+**
+** This program is free software: you can redistribute it and/or modify
+** it under the terms of the GNU General Public License as published by
+** the Free Software Foundation, either version 3 of the License, or
+** any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** Software Author: Brian Hill <brian.hill@glowfish.ca>
+**
+** Summary: Header of the companion class for the spinner widget
+**
+****************************************************************************/
+
 #ifndef SPINNER_PLUGIN_H
 #define SPINNER_PLUGIN_H
 
 #include <QObject>
+#include <QDesignerCustomWidgetInterface>
 
-class SpinnerPlugin : public QObject
+class SpinnerPlugin : public QObject, public QDesignerCustomWidgetInterface
 {
     Q_OBJECT
+    Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QDesignerCustomWidgetInterface" FILE "spinner.json")
+    Q_INTERFACES(QDesignerCustomWidgetInterface)
+
 public:
     explicit SpinnerPlugin(QObject *parent = 0);
 
-signals:
+    bool isContainer() const;
+    bool isInitialized() const;
+    QIcon icon() const;
+    QString domXml() const;
+    QString group() const;
+    QString includeFile() const;
+    QString name() const;
+    QString toolTip() const;
+    QString whatsThis() const;
+    QWidget *createWidget(QWidget *parent);
+    void initialize(QDesignerFormEditorInterface *core);
 
-public slots:
-
+private:
+    bool m_initialized;
 };
 
 #endif // SPINNER_PLUGIN_H

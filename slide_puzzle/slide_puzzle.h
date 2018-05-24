@@ -24,6 +24,8 @@
 #ifndef SLIDE_PUZZLE_H
 #define SLIDE_PUZZLE_H
 
+#include "tile.h"
+
 #include <QWidget>
 #include <QtDesigner/QDesignerExportWidget>
 #include <QGraphicsScene>
@@ -75,15 +77,33 @@ private:
     QGraphicsScene *m_scene;
     bool m_solved;
 
+    template<typename C>
+    void itemsByType(QList<C*> &o, int t) const {
+        QList<QGraphicsItem*> items = m_scene->items(m_scene->sceneRect());
+        for(QList<QGraphicsItem*>::const_iterator it(items.begin());
+            it != items.end(); it++) {
+            QGraphicsItem *item = *it;
+            if (item->type() != t) continue;
+            o.push_back(static_cast<C*>(item));
+        }
+    }
+
+    void borders(QList<QGraphicsLineItem*> &l) const;
+    void tiles(QList<Tile*> &t) const;
+
+    void setBorderColor(const QColor &c);
+
     void init();
     void fit();
     void setup();
+    void reset();
 
 public slots:
     void scramble();
     void validate();
     void enable();
     void disable();
+    void pass();
 };
 
 #endif // SLIDE_PUZZLE_H
