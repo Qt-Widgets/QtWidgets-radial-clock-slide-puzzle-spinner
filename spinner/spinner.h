@@ -30,15 +30,16 @@
 #include <QWidget>
 #include <QtDesigner/QDesignerExportWidget>
 #include <QGraphicsScene>
+#include <QGraphicsDropShadowEffect>
 #include <QEventLoop>
 
 class QDESIGNER_WIDGET_EXPORT Spinner : public QWidget
 {
     Q_OBJECT
-    Q_PROPERTY(int radius READ radius WRITE setRadius);
     Q_PROPERTY(QString labels READ labels WRITE setLabels);
     Q_PROPERTY(QString colors READ colors WRITE setColors);
-    Q_PROPERTY(int inner READ inner WRITE setInner);
+    Q_PROPERTY(int innerRadius READ innerRadius WRITE setInnerRadius);
+    Q_PROPERTY(int outerRadius READ outerRadius WRITE setOuterRadius);
     Q_PROPERTY(QColor center READ center WRITE setCenter);
 
 public:
@@ -47,17 +48,16 @@ public:
 
     /************************************************************************
     ** Encapsulated Properties
-    ** - radius -- The outer radius of the spinner plate.
     ** - labels -- The set of labels, comma delimited.
     ** - colors -- The corresponding colors, comma delimited.
-    ** - inner -- The inner radius for the spinner plate.
+    ** - innerRadius -- The inner radius for the spinner plate.
+    ** - outerRadius -- The outer radius of the spinner plate.
     ** - center -- The center color for inside the inner radius.
     ************************************************************************/
-    int radius() { return m_radius; }
-    void setRadius(int r) {
+    int outerRadius() const { return m_radius; }
+    void setOuterRadius(int r) {
         m_radius = r;
-        int D = 2*m_radius;
-        m_scene->setSceneRect(-m_radius, -m_radius, D, D);
+        updateRadius();
     }
 
     const QString &labels() const { return m_labels; }
@@ -78,11 +78,11 @@ public:
         }
     }
 
-    int inner() const
+    int innerRadius() const
     {
         return m_board->innerRadius();
     }
-    void setInner(int i)
+    void setInnerRadius(int i)
     {
         m_board->setInnerRadius(i);
     }
@@ -98,6 +98,8 @@ public:
     void setTags();
 
     const QString &value() const;
+
+    QString describe() const;
 
     void populateBoard();
     void populateNeedle();
@@ -121,8 +123,10 @@ private:
     mutable QEventLoop m_loop;
     Needle *m_needle;
     Board *m_board;
+    QGraphicsDropShadowEffect m_effect;
 
     void fit();
+    void updateRadius();
 
 public slots:
     void spin();

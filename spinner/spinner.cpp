@@ -26,7 +26,6 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QLabel>
-#include <iostream>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QPropertyAnimation>
@@ -35,6 +34,9 @@
 #include <QTimer>
 #include <QGridLayout>
 #include <QEventLoop>
+#include <QMouseEvent>
+
+#include <iostream>
 
 namespace {
 
@@ -77,8 +79,6 @@ Spinner::Spinner(QWidget *parent) :
     m_colors("#FF0000,#00FF00,#0000FF,#FF00FF")
 {        
     m_scene = new QGraphicsScene(this);
-    int D = 2*m_radius;
-    m_scene->setSceneRect(-m_radius, -m_radius, D, D);
 
     m_timer = new QTimer(this);
     connect(m_timer, SIGNAL(timeout()), m_scene, SLOT(advance()));
@@ -89,7 +89,6 @@ Spinner::Spinner(QWidget *parent) :
     view->setStyleSheet("background: transparent");
     view->setRenderHint(QPainter::Antialiasing, false);
     view->setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
-    view->fitInView(m_board, Qt::KeepAspectRatio);
 
     QPushButton *spin = new QPushButton("spin", this);
     spin->setGeometry(0,0,10,10);
@@ -105,6 +104,8 @@ Spinner::Spinner(QWidget *parent) :
     layout->addWidget(value, 0,1,1,1);
     layout->addWidget(spin, 1,1,1,1);
     setLayout(layout);
+
+    updateRadius();
 
     return;
 }
@@ -142,6 +143,17 @@ const QString &Spinner::value() const {
     return m_board->value(angle);
 }
 
+QString Spinner::describe() const
+{
+    QString props;
+    props += "labels: " + labels() + "\n";
+    props += "colors: " + colors() + "\n";
+    props += "innerRadius: " + QString::number(innerRadius()) + "\n";
+    props += "outerRadius: " + QString::number(outerRadius()) + "\n";
+    props += "center: " + center().name() + "\n";
+    return props;
+}
+
 void Spinner::populateBoard() {
     m_board = new Board(m_radius, QColor(Qt::white));
     m_board->setPos(0, 0);
@@ -150,10 +162,11 @@ void Spinner::populateBoard() {
 }
 
 void Spinner::populateNeedle() {
-    int W = 2*radius()/4;
+    int W = 2*outerRadius()/4;
     int H = W*3;
     m_needle = new Needle(W, H);
     m_needle->setPos(0, 0);
+    m_needle->setGraphicsEffect(&m_effect);
     m_scene->addItem(m_needle);
     m_needle->whenStopped(m_timer, SLOT(stop()));
     m_needle->whenStarted(this, SLOT(disable()));
@@ -224,8 +237,14 @@ void Spinner::showEvent(QShowEvent *e)
 }
 
 void Spinner::fit() {
+    updateRadius();
+    view(this)->fitInView(m_scene->sceneRect(), Qt::KeepAspectRatio);
+}
+
+void Spinner::updateRadius(){
     int D = 2*m_radius;
-    view(this)->fitInView(-m_radius, -m_radius, D, D, Qt::KeepAspectRatio);
+    m_scene->setSceneRect(-m_radius, -m_radius, D, D);
+    m_effect.setBlurRadius(m_radius/4);
 }
 
 void Spinner::disable() {
@@ -240,6 +259,6 @@ void Spinner::enable() {
     btn->setEnabled(true);
     QLabel *val = label(this);
     val->setEnabled(true);
-    val->setText(QString("Result: ") + value());
+    val->setText(QString("Result:\n") + value());
 
 }
