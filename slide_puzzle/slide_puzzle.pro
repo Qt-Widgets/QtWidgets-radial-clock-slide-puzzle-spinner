@@ -45,3 +45,6 @@ DISTFILES += \
 OTHER_FILES += \
     slide_puzzle.json \
     image.png
+
+RESOURCES += \
+    images.qrc
