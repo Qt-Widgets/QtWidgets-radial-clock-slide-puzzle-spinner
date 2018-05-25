@@ -27,8 +27,15 @@
 #include <QGraphicsView>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QColormap>
 #include <QTime>
+#include <QFile>
+#include <QDirIterator>
 #include <math.h>
+
+#include <QDebug>
+
+#include <iostream>
 
 namespace {
 
@@ -59,6 +66,24 @@ int position(int offset, int multiple, int delta)
     return offset + multiple*delta;
 }
 
+QString getResource(QString n)
+{
+    QString ref(":/images/");
+    QDirIterator it(":", QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        QString name = it.next();
+        if (name.left(ref.size()) != ref) {
+            continue;
+        }
+        if (name == n || name.right(name.size()-ref.size()) == n) {
+            return name;
+        }
+    }
+
+    qDebug() << "Image " << n << " not found";
+    return QString(":/images/not-found.png");
+}
+
 } // end namespace
 
 /************************************************************************
@@ -66,18 +91,19 @@ int position(int offset, int multiple, int delta)
 ************************************************************************/
 SlidePuzzle::SlidePuzzle(QWidget *parent) :
     QWidget(parent),
-    m_rows(2),
-    m_columns(2),
-    m_imageFile("/home/pi/qt_widgets/QtWidgets/slide_puzzle/image.png")
+    m_rows(3),
+    m_columns(3),
+    m_imageFile(":/images/logo.png"),
+    m_puzzleBackground(Qt::gray),
+    m_imageBackground(Qt::white)
 {
+    Q_INIT_RESOURCE(images);
     m_scene = new QGraphicsScene(this);
 
     QGraphicsView *view = new QGraphicsView(m_scene, this);
     view->setStyleSheet("background: transparent");
     view->setRenderHint(QPainter::Antialiasing, false);
     view->setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
-
-    init();
 
     QPushButton *button = new QPushButton("scramble", this);
     button->setText("Reset");
@@ -92,20 +118,51 @@ SlidePuzzle::SlidePuzzle(QWidget *parent) :
 void SlidePuzzle::setRows(int r)
 {
     m_rows = r;
-    init();
+    init(false);
 }
 
 void SlidePuzzle::setColumns(int c)
 {
     m_columns = c;
-    init();
+    init(false);
 }
 
-void SlidePuzzle::setImage(const QString& f)
-{
+void SlidePuzzle::setImage(QString f)
+{    
+    QFile file(f);
+    if (file.exists() == false) {
+        f = getResource(f);
+    }
     m_imageFile = f;
-    init();
-    fit();
+    init(false);
+}
+
+void SlidePuzzle::setPuzzleBackground(const QColor &c)
+{
+    m_puzzleBackground = c;
+    QGraphicsRectItem *b = background();
+    if (b != NULL) {
+        QBrush brush(c);
+        b->setBrush(brush);
+        m_scene->update();
+    }
+}
+
+void SlidePuzzle::setImageBackground(const QColor &c)
+{
+    m_imageBackground = c;
+    if (init(false)) m_scene->update();
+}
+
+QString SlidePuzzle::describe() const
+{
+    QString props;
+    props += "rows: " + QString::number(rows()) + "\n";
+    props += "columns: " + QString::number(columns()) + "\n";
+    props += "imageFile: " + image() + "\n";
+    props += "puzzleBackground: " + puzzleBackground().name() + "\n";
+    props += "imageBackground: " + imageBackground().name() + "\n";
+    return props;
 }
 
 std::ostream &SlidePuzzle::describe(std::ostream &strm) const
@@ -128,6 +185,10 @@ void SlidePuzzle::resizeEvent(QResizeEvent *e)
 void SlidePuzzle::showEvent(QShowEvent *e)
 {
     Q_UNUSED(e);
+    if (populated() == false) {
+        setup();
+        scramble();
+    }
     fit();
 }
 
@@ -139,6 +200,13 @@ void SlidePuzzle::borders(QList<QGraphicsLineItem*> &l) const
 void SlidePuzzle::tiles(QList<Tile *> &t) const
 {
     itemsByType<Tile>(t, Tile::Type);
+}
+
+QGraphicsRectItem *SlidePuzzle::background() const
+{
+    QList<QGraphicsRectItem*> o;
+    itemsByType<QGraphicsRectItem>(o, QGraphicsRectItem::Type);
+    return (o.empty()) ? NULL : o.first();
 }
 
 void SlidePuzzle::setBorderColor(const QColor &c)
@@ -171,11 +239,25 @@ void SlidePuzzle::setBorderColor(const QColor &c)
     }
 }
 
-void SlidePuzzle::init()
+void SlidePuzzle::setEnabledTiles(bool e)
 {
+    QList<Tile*> t;
+    tiles(t);
+    for(QList<Tile*>::const_iterator it(t.begin());
+        it != t.end(); it++) {
+        (*it)->setBorder(e);
+        (*it)->setEnabled(e);
+    }
+}
+
+bool SlidePuzzle::init(bool flag)
+{
+    if (!flag && populated() == false) return false;
     setup();
     scramble();
     fit();
+    m_scene->update();
+    return true;
 }
 
 void SlidePuzzle::fit() {
@@ -184,12 +266,19 @@ void SlidePuzzle::fit() {
 
 void SlidePuzzle::setup()
 {
+    m_scene->clear();
     QImage img(m_imageFile);
     if (img.width() == 0) {
         return;
     }
 
     const QSize &size = img.size();
+    QImage destination(size, QImage::Format_RGB32);
+    destination.fill(imageBackground());
+    QPainter p(&destination);
+    p.setCompositionMode(QPainter::CompositionMode_SourceAtop);
+    p.drawImage(0, 0, img);
+
     int width = size.width();
     int height = size.height();
     int w = ceil((width+0.0)/m_columns);
@@ -200,8 +289,8 @@ void SlidePuzzle::setup()
     m_scene->setSceneRect(-dx, -dy, width + 2*w + 2*dx, height + 2*dy);
     m_scene->clear();
 
-    QPen backPen(Qt::white);
-    QBrush backBrush(Qt::white);
+    QPen backPen(puzzleBackground());
+    QBrush backBrush(puzzleBackground());
     m_scene->addRect(-dx, -dy, width+2*dx, height+2*dy, backPen, backBrush);
 
     int id = 0;
@@ -210,7 +299,7 @@ void SlidePuzzle::setup()
             QRect box(position(-dx, c, w),
                       position(-dy, r, h),
                       w, h);
-            Tile* tile = new Tile(id++, r, c, img.copy(box));
+            Tile* tile = new Tile(id++, r, c, destination.copy(box));
             tile->setPos(position(-dx, c, w), position(-dy, r, h));
             m_scene->addItem(tile);
             connect(tile, SIGNAL(stop()), this, SLOT(validate()));
@@ -234,14 +323,7 @@ void SlidePuzzle::reset()
 {
     QColor black(Qt::black);
     setBorderColor(black);
-
-    QList<Tile*> t;
-    tiles(t);
-    for(QList<Tile*>::const_iterator it(t.begin());
-        it != t.end(); it++) {
-        (*it)->setBorder(true);
-        (*it)->setEnabled(true);
-    }
+    setEnabledTiles(true);
 }
 
 
@@ -289,8 +371,6 @@ void SlidePuzzle::scramble()
 
 void SlidePuzzle::validate()
 {
-    QList<QGraphicsItem*> items = m_scene->items(m_scene->sceneRect());
-
     Tile* missing = NULL;
     QList<Tile*> t;
     tiles(t);
@@ -306,9 +386,15 @@ void SlidePuzzle::validate()
         }
     }
 
-    int dx = (missing->column()-missing->acolumn());
-    int dy = (missing->row()-missing->arow());
-    missing->shift(missing->width()*dx, missing->height()*dy, this, SLOT(pass()));
+    const QRectF &rect = m_scene->sceneRect();
+    int dx = rect.x();
+    int dy = rect.y();
+    int w = missing->width();
+    int h = missing->height();
+
+    int sx = (position(dx, missing->column(), w)-missing->x());
+    int sy = (position(dy, missing->row(), h)-missing->y());
+    missing->shift(sx, sy, this, SLOT(pass()));
 
     m_solved = true;    
 }
@@ -327,14 +413,7 @@ void SlidePuzzle::pass()
 {
     QColor green(Qt::green);
     setBorderColor(green);
-
-    QList<Tile*> t;
-    tiles(t);
-    for(QList<Tile*>::const_iterator it(t.begin());
-        it != t.end(); it++) {
-        (*it)->setBorder(false);
-        (*it)->setEnabled(false);
-    }
+    setEnabledTiles(false);
 
     m_scene->update();
     enable();

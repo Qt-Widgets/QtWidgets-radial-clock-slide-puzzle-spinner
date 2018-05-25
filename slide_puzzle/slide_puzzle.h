@@ -36,6 +36,8 @@ class QDESIGNER_WIDGET_EXPORT SlidePuzzle : public QWidget
     Q_PROPERTY(int rows READ rows WRITE setRows);
     Q_PROPERTY(int columns READ columns WRITE setColumns);
     Q_PROPERTY(QString image READ image WRITE setImage);
+    Q_PROPERTY(QColor puzzleBackground READ puzzleBackground WRITE setPuzzleBackground);
+    Q_PROPERTY(QColor imageBackground READ imageBackground WRITE setImageBackground);
 
 public:
     explicit SlidePuzzle(QWidget *parent = 0);
@@ -46,6 +48,7 @@ public:
     ** - rows -- The number of rows to create.
     ** - columns -- The number of columns to create.
     ** - image -- The image file to use.
+    ** - background -- The background color to use for the puzzle.
     ************************************************************************/
     int rows() const { return m_rows; }
     void setRows(int r);
@@ -53,11 +56,18 @@ public:
     int columns() const { return m_columns; }
     void setColumns(int c);
 
-    const QString &image() { return m_imageFile; }
-    void setImage(const QString &f);
+    const QString &image() const { return m_imageFile; }
+    void setImage(QString f);
+
+    const QColor &puzzleBackground() const { return m_puzzleBackground; }
+    void setPuzzleBackground(const QColor &c);
+
+    const QColor &imageBackground() const { return m_imageBackground; }
+    void setImageBackground(const QColor &c);
 
     bool solved() const { return m_solved; }
 
+    QString describe() const;
     std::ostream &describe(std::ostream &strm) const;
 
 protected:
@@ -74,6 +84,8 @@ private:
     int m_rows;
     int m_columns;
     QString m_imageFile;
+    QColor m_puzzleBackground;
+    QColor m_imageBackground;
     QGraphicsScene *m_scene;
     bool m_solved;
 
@@ -90,13 +102,17 @@ private:
 
     void borders(QList<QGraphicsLineItem*> &l) const;
     void tiles(QList<Tile*> &t) const;
+    QGraphicsRectItem *background() const;
 
     void setBorderColor(const QColor &c);
+    void setEnabledTiles(bool e);
 
-    void init();
+    bool populated() { return background() != NULL; }
+    bool init(bool f);
     void fit();
     void setup();
     void reset();
+
 
 public slots:
     void scramble();
