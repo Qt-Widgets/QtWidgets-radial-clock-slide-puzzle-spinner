@@ -2,6 +2,8 @@
 #include "needle.h"
 
 #include <QPainter>
+#include <QToolTip>
+
 #include <iostream>
 
 /************************************************************************
@@ -47,8 +49,8 @@ Board::Board(int outerRadius, const QColor &color)
 }
 
 void Board::init() {
-    setActive(false);
-    setEnabled(false);
+    //setActive(false);
+    //setEnabled(false);
 }
 
 Board::~Board()
@@ -66,7 +68,7 @@ QRectF Board::boundingRect() const {
 }
 
 const QString &Board::value(qreal a) {
-    int angle = int(a) % Needle::cFullCircle;
+    int angle = int(a) % C_CIRCLE;
     QMap<int, int>::iterator it = m_regions.lowerBound(angle);
     if (it == m_regions.end()) {
         it = m_regions.begin();
@@ -85,7 +87,7 @@ void Board::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
     const QPen &pen = painter->pen();
 
     int N = num();
-    int slice = int((Needle::cFullCircle + 0.0)/N);
+    int slice = int((C_CIRCLE + 0.0)/N);
     int startAngle = 90;
     m_regions.clear();
 
@@ -96,7 +98,7 @@ void Board::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
         painter->setBrush(c);
         painter->drawPie(border, startAngle*16, slice*16);
         startAngle += slice;
-        m_regions.insert(startAngle % Needle::cFullCircle, i);
+        m_regions.insert(startAngle % C_CIRCLE, i);
     }
 
     if(innerRadius() > 0) {
@@ -105,4 +107,26 @@ void Board::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
         painter->drawEllipse(square(innerRadius()));
 
     }
+}
+
+void Board::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    QPoint pos(event->lastScenePos().toPoint());
+    int dx = pos.x();
+    int dy = pos.y();
+    double dist = sqrt(pow(dx,2) + pow(dy,2));
+    if (dist > outerRadius() || dist < innerRadius()) {
+        return;
+    }
+
+    qreal angle = asin(-dy/dist) * 180.0 / M_PI;
+
+    if (dx < 0) {
+        angle = 180 - angle;
+    } else if (dy > 0) {
+        angle = 360 + angle;
+    }
+
+    const QString &label = value(angle);
+    QToolTip::showText(event->screenPos(), QString(label));
 }

@@ -25,6 +25,7 @@
 #define BOARD_H
 
 #include <QGraphicsItem>
+#include <QGraphicsSceneMouseEvent>
 
 class Board : public QGraphicsItem
 {
@@ -83,6 +84,7 @@ protected:
     ** Graphic Callbacks
     ************************************************************************/
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
 
 private:
     /************************************************************************
