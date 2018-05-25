@@ -29,6 +29,8 @@
 #include <QElapsedTimer>
 #include <math.h>
 
+#define C_CIRCLE 360
+
 class Needle : public QObject, public QGraphicsItem
 {
     Q_OBJECT
@@ -37,8 +39,6 @@ class Needle : public QObject, public QGraphicsItem
 public:
     explicit Needle(int width, int height);
     ~Needle();
-
-    static const int cFullCircle;
 
     static const int cType;
     virtual int type() const;
@@ -89,10 +89,6 @@ private:
 signals:
     void starting();
     void stopping();
-
-public slots:
-    void start();
-    void stop();
 };
 
 #endif // NEEDLE_H

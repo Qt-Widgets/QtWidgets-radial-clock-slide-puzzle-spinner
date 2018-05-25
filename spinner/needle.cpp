@@ -39,7 +39,6 @@
 ** Constants
 ************************************************************************/
 const int Needle::cType = QGraphicsItem::UserType+2;
-const int Needle::cFullCircle = 360;
 
 /************************************************************************
 ** Constructor/Destructor
@@ -67,8 +66,8 @@ void Needle::reset() {
     m_speed = BaseSpeed + (qrand() % VariantSpeed);
     m_elapsed.start();
     m_startAngle = rotation();
-    m_stopAngle = int(qrand() % cFullCircle);
-    m_distance = m_revolution * (2 + m_stopAngle/(cFullCircle+0.0));
+    m_stopAngle = int(qrand() % C_CIRCLE);
+    m_distance = m_revolution * (2 + m_stopAngle/(C_CIRCLE+0.0));
     m_acceleration = -pow(m_speed, 2)/(2 * m_distance);
     m_stop = -m_speed/m_acceleration;
 }
@@ -136,7 +135,7 @@ void Needle::advance(int phase)
     if (!phase) return;
 
     if (spin() == false) {
-        stop();
+        emit stopping();
     }
 }
 
@@ -151,7 +150,7 @@ bool Needle::spin() {
         return false;
     }
 
-    int ang = int(m_startAngle + (dist/m_revolution)*cFullCircle) % cFullCircle;
+    int ang = int(m_startAngle + (dist/m_revolution)*C_CIRCLE) % C_CIRCLE;
     setRotation(ang);
     return true;
 }
