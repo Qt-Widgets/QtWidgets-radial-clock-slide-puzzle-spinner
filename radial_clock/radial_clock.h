@@ -96,7 +96,9 @@ public:
                                           m_colors.clear(); }
 
     bool rainbow() const { return m_rainbow; }
-    void setRainbow(bool r) { m_months = r; }
+    void setRainbow(bool r) { m_rainbow = r; }
+
+    QString describe() const;
 
     /************************************************************************
     ** TimeCode - An enumerated type to differentiate the different rings
@@ -112,7 +114,7 @@ public:
         MonthOfYear = 6,
         InvalidTimeCode = 7
     };
-    static const std::string cTimeCodes[InvalidTimeCode];
+    static const QString cTimeCodes[InvalidTimeCode];
 
     static bool isDay(const TimeCode &tc);
     static void related(const TimeCode &tc, std::vector<TimeCode> &family);

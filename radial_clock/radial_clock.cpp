@@ -30,6 +30,8 @@
 #include <QToolTip>
 #include <math.h>
 
+#include <iostream>
+
 /************************************************************************
 ** A loop for each defined TimeCode value.
 ************************************************************************/
@@ -38,7 +40,7 @@
 /************************************************************************
 ** Constants
 ************************************************************************/
-const std::string RadialClock::cTimeCodes[InvalidTimeCode] =
+const QString RadialClock::cTimeCodes[InvalidTimeCode] =
   // String                    TimeCode
 { "Seconds Left In Minute", // SecondOfMinute
   "Minutes Left In Hour",   // MinuteOfHour
@@ -51,6 +53,13 @@ const std::string RadialClock::cTimeCodes[InvalidTimeCode] =
 // Define the backup color 'black'.
 const QColor RadialClock::cBlack = QColor(Qt::black);
 
+namespace {
+    QString boolToStr(bool v)
+    {
+        return v ? "true" : "false";
+    }
+}
+
 /************************************************************************
 ** Constructor/Destructor
 ************************************************************************/
@@ -60,9 +69,9 @@ RadialClock::RadialClock(QWidget *parent) :
     m_seconds(true),
     m_minutes(true),
     m_hours(true),
-    m_weekDays(false),
+    m_weekDays(true),
     m_monthDays(true),
-    m_yearDays(false),
+    m_yearDays(true),
     m_months(true),
     m_rainbow(false)
 {
@@ -77,6 +86,23 @@ RadialClock::RadialClock(QWidget *parent) :
 RadialClock::~RadialClock()
 {
     delete m_timer;
+}
+
+QString RadialClock::describe() const
+{
+    QString props;
+    props += "blip: " + boolToStr(blip()) + "\n";
+    props += "seconds: " + boolToStr(seconds()) + "\n";
+    props += "minutes: " + boolToStr(minutes()) + "\n";
+    props += "hours: " + boolToStr(hours()) + "\n";
+    props += "weekDays: " + boolToStr(weekDays()) + "\n";
+    props += "monthDays: " + boolToStr(monthDays()) + "\n";
+    props += "yearDays: " + boolToStr(yearDays()) + "\n";
+    props += "months: " + boolToStr(months()) + "\n";
+    props += "rainbow: " + boolToStr(rainbow()) + "\n";
+    props += "outerColor: " + outerColor().name() + "\n";
+    props += "innerColor: " + innerColor().name() + "\n";
+    return props;
 }
 
 /************************************************************************
@@ -303,7 +329,7 @@ void RadialClock::getColors(const std::vector<QColor> &reference, int s, std::ve
             double j2p = (j2+0.0)/(refNum);
             double delta = j2p - j1p;
             double f = (p - j1p)/delta;
-            colors.push_back(interpolateColor(reference[j2], reference[j1], f));
+            colors.push_back(interpolateColor(reference[j1], reference[j2], f));
         }
     }
 }
@@ -343,11 +369,11 @@ void RadialClock::paintEvent(QPaintEvent *)
     QDateTime dtime = QDateTime::currentDateTime();
     QDate date = dtime.date();
     QTime time = dtime.time();
-    std::string delim = ((time.second()) % 2 == 0) ? ":" : " ";
-    std::string pattern = "hh"+delim+"mm"+delim+"ss";
+    QString delim = ((time.second()) % 2 == 0) ? ":" : " ";
+    QString pattern = "hh"+delim+"mm"+delim+"ss";
 
     QString date_text = date.toString("ddd d, MMM");
-    QString time_text = time.toString(pattern.c_str());
+    QString time_text = time.toString(pattern);
 
     int W = width();
     int H = height();
@@ -418,8 +444,8 @@ void RadialClock::mousePressEvent(QMouseEvent *event)
     if (it->second != tc) {
         return;
     }
-    const std::string &msg = cTimeCodes[tc];
-    QToolTip::showText(event->globalPos(), QString(msg.c_str()));
+
+    QToolTip::showText(event->globalPos(), cTimeCodes[tc]);
 }
 
 void RadialClock::addAngle(angleVector &angles, TimeCode tc, int value, int ref, bool blip)
